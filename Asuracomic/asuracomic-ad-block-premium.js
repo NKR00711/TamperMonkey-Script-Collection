@@ -84,7 +84,7 @@
                                 //json.data.premium.upgraded = "2025-09-17T19:59:38.000000Z";
                                 json.data.premium.active = true;
                                 json.data.premium.plan = "No Ad By NKR🦁";
-                                json.data.premium.type = "v1";
+                                //json.data.premium.type = "v1";
                                 json.data.premium.expires_at = "9999-09-17T19:59:38.000000Z";
                                 Object.defineProperty(xhr, 'responseText', {value: JSON.stringify(json)});
                                 Object.defineProperty(xhr, 'response', {value: JSON.stringify(json)});
