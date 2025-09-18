@@ -22,44 +22,6 @@
         }
     }
 
-    function cloneHeaders(h) {
-        const nh = new Headers();
-        try {
-            for (const [k, v] of h.entries()) nh.append(k, v);
-        } catch (e) {
-            for (const k of Object.keys(h || {})) nh.append(k, h[k]);
-        }
-        return nh;
-    }
-
-    // fetch override
-    const origFetch = window.fetch.bind(window);
-    window.fetch = async function(input, init) {
-        const url = (typeof input === 'string') ? input : input.url;
-        const res = await origFetch(input, init);
-
-        if (isTargetUrl(url)) {
-            try {
-                const ct = res.headers.get('content-type') || '';
-                if (ct.includes('application/json')) {
-                    const json = await res.clone().json();
-                    if (json && json.data && json.data.premium) {
-                        json.data.premium.active = true;
-                        const body = JSON.stringify(json);
-                        return new Response(body, {
-                            status: res.status,
-                            statusText: res.statusText,
-                            headers: cloneHeaders(res.headers)
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error('modify fetch /api/user error', e);
-            }
-        }
-        return res;
-    };
-
     // XHR override
     const OrigXHR = window.XMLHttpRequest;
     function ModifiedXHR() {
