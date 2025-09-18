@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Asura Ad Block Premium
-// @namespace    tmux
+// @namespace    asuracomic
 // @version      1.0
 // @icon         https://asuracomic.net/images/logo.webp
 // @match        https://asuracomic.net/*
@@ -81,7 +81,7 @@
                         if (ct.includes('application/json')) {
                             const json = JSON.parse(xhr.responseText);
                             if (json && json.data && json.data.premium) {
-                                json.data.premium.upgraded = "2025-09-17T19:59:38.000000Z";
+                                //json.data.premium.upgraded = "2025-09-17T19:59:38.000000Z";
                                 json.data.premium.active = true;
                                 json.data.premium.plan = "No Ad By NKR🦁";
                                 json.data.premium.type = "v1";
