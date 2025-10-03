@@ -36,8 +36,8 @@
           "tester": true,
           "has_custom_username": true,
           "email_verified": true,
-          "staff": true,
-          "moderator": true,
+          "staff": false,
+          "moderator": false,
           "vip": true
         },
         "premium": {
