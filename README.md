@@ -1,5 +1,5 @@
 # TamperMonkey-Script-Collection
-A Collection of TamperMonkey Script I Made or Use
+A Collection of TamperMonkey Script I Made (Mostly) or Use
 
 ## Installation
 
@@ -13,3 +13,4 @@ A Collection of TamperMonkey Script I Made or Use
 ## Scripts
 
 * [AsuraComic No Ad](/Asuracomic)
+* [Telegram Web Translator](/Telegram)
