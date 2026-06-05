@@ -1,105 +1,180 @@
 // ==UserScript==
-// @name         Asura PopUp/Ad Block Premium
+// @name         Asura Premium Spoofer
 // @namespace    tasuracomic
-// @version      1.1
-// @icon         https://asuracomic.net/images/logo.webp
-// @match        https://asuracomic.net/*
+// @version      1.2
+// @icon         https://asurascans.com/images/logo.webp
+// @match        https://asurascans.com/*
 // @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const TARGET_ORIGIN = 'https://gg.asuracomic.net';
-    const TARGET_PATH = '/api/user';
+    // Override fetch API
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0];
+        const urlStr = typeof url === 'string' ? url : url?.url;
 
-    function isTargetUrl(urlStr) {
-        try {
-            const u = new URL(urlStr, window.location.origin);
-            return u.origin === TARGET_ORIGIN && u.pathname === TARGET_PATH;
-        } catch (e) {
-            return false;
-        }
-    }
+        return originalFetch.apply(this, args).then(async response => {
+            // Check if this is a subscriptions or auth endpoint
+            if (urlStr && (
+                urlStr.includes('/api/subscriptions') ||
+                urlStr.includes('/api/auth/refresh') ||
+                urlStr.includes('/api/user')
+            )) {
+                // Clone the response
+                const clonedResponse = response.clone();
+                const contentType = clonedResponse.headers.get('Content-Type');
 
-    const FIXED = {
-      "success": true,
-      "data": {
-        "id": 1,
-        "name": "Anonymous",
-        "username": "anonymous",
-        "email": "No Pop Up / Ad By NKR🦁",
-        "created_at": "2025-09-17T19:59:38.000000Z",
-        "profile_image": null,
-        "description": "",
-        "flags": {
-          "tester": true,
-          "has_custom_username": true,
-          "email_verified": true,
-          "staff": false,
-          "moderator": false,
-          "vip": true
-        },
-        "premium": {
-          "active": true,
-          "expires_at": "9999-09-17T19:59:38.000000Z",
-          "upgraded": "2025-09-17T19:59:38.000000Z",
-          "cancelled_at": null,
-          "plan": "No Ad By NKR🦁",
-          "eligible_for_trial": true,
-          "type": "v2"
-        },
-        "social_accounts": {
-          "google": { "connected": true }
-        }
-      }
-    };
-    const FIXED_TEXT = JSON.stringify(FIXED);
-
-    // XHR override
-    const OrigXHR = window.XMLHttpRequest;
-    function ModifiedXHR() {
-        const xhr = new OrigXHR();
-        let url = null;
-
-        const origOpen = xhr.open;
-        xhr.open = function(method, reqUrl) {
-            url = reqUrl + '';
-            return origOpen.apply(this, arguments);
-        };
-
-        const origSend = xhr.send;
-        xhr.send = function() {
-            const onReady = function() {
-                if (xhr.readyState === 4 && url && isTargetUrl(url)) {
+                if (contentType && contentType.includes('application/json')) {
                     try {
-                        const ct = xhr.getResponseHeader('Content-Type') || '';
-                        if (ct.includes('application/json')) {
-                            const json = JSON.parse(xhr.responseText);
-                            if (json && json.data && json.data.premium) {
-                                //json.data.premium.upgraded = "2025-09-17T19:59:38.000000Z";
-                                json.data.premium.active = true;
-                                json.data.premium.plan = "No Ad By NKR🦁";
-                                //json.data.premium.type = "v1";
-                                json.data.premium.expires_at = "9999-09-17T19:59:38.000000Z";
-                                Object.defineProperty(xhr, 'responseText', {value: JSON.stringify(json)});
-                                Object.defineProperty(xhr, 'response', {value: JSON.stringify(json)});
-                            } else {
-                                Object.defineProperty(xhr, 'responseText', { value: FIXED_TEXT });
-                                Object.defineProperty(xhr, 'response', { value: FIXED_TEXT });
-                                Object.defineProperty(this, 'status', { value: 200 });
-                                Object.defineProperty(this, 'statusText', { value: 'OK' });
+                        const data = await clonedResponse.json();
+
+                        // Modify subscription data
+                        if (data.data) {
+                            // For /api/subscriptions endpoint
+                            if (data.data.has_subscription !== undefined) {
+                                data.data.has_subscription = true;
+                                data.data.benefits_active = true;
+                                data.data.cancel_at_period_end = false;
+                                data.data.is_banned = false;
+                                data.data.is_legacy = false;
+                                if (!data.data.plan) data.data.tier = "premium";
+                                if (!data.data.expires_at) data.data.expires_at = "9999-12-31T23:59:59Z";
+                            }
+
+                            // For /api/auth/refresh or /api/user endpoints
+                            if (data.data.subscription_status !== undefined) {
+                                data.data.subscription_status.has_subscription = true;
+                                data.data.subscription_status.cancel_at_period_end = false;
+                                data.data.subscription_status.is_banned = false;
+                                if (!data.data.subscription_status.tier) data.data.subscription_status.tier = "premium";
+                                if (!data.data.subscription_status.expires_at) data.data.subscription_status.expires_at = "9999-12-31T23:59:59Z";
+                            }
+
+                            if (data.data.expires_at) {
+                                data.data.expires_at = "9999-12-31T23:59:59Z";
                             }
                         }
+
+                        // Create new response with modified data
+                        return new Response(JSON.stringify(data), {
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: response.headers
+                        });
                     } catch (e) {
-                        console.error('modify xhr /api/user error', e);
+                        console.error('Error modifying fetch response:', e);
+                    }
+                }
+            }
+            return response;
+        });
+    };
+
+    // Override XMLHttpRequest
+    const XHR = XMLHttpRequest.prototype;
+    const originalOpen = XHR.open;
+    const originalSend = XHR.send;
+    const originalSetRequestHeader = XHR.setRequestHeader;
+
+    function modifyXHR() {
+        let url = null;
+        let requestHeaders = {};
+
+        this.open = function(method, reqUrl) {
+            url = reqUrl;
+            return originalOpen.apply(this, arguments);
+        };
+
+        this.setRequestHeader = function(header, value) {
+            requestHeaders[header] = value;
+            return originalSetRequestHeader.apply(this, arguments);
+        };
+
+        this.send = function(body) {
+            const self = this;
+            const onReadyStateChange = function() {
+                if (self.readyState === 4 && url && (
+                    url.includes('/api/subscriptions') ||
+                    url.includes('/api/auth/refresh') ||
+                    url.includes('/api/user')
+                )) {
+                    try {
+                        const contentType = self.getResponseHeader('Content-Type');
+                        if (contentType && contentType.includes('application/json')) {
+                            let data = JSON.parse(self.responseText);
+
+                            // Modify subscription data
+                            if (data.data) {
+                                if (data.data.has_subscription !== undefined) {
+                                    data.data.has_subscription = true;
+                                    data.data.benefits_active = true;
+                                    data.data.cancel_at_period_end = false;
+                                    data.data.is_banned = false;
+                                    data.data.is_legacy = false;
+                                    if (!data.data.plan) data.data.tier = "premium";
+                                    if (!data.data.expires_at) data.data.expires_at = "9999-12-31T23:59:59Z";
+                                }
+
+                                if (data.data.subscription_status !== undefined) {
+                                    data.data.subscription_status.has_subscription = true;
+                                    data.data.subscription_status.cancel_at_period_end = false;
+                                    data.data.subscription_status.is_banned = false;
+                                    if (!data.data.subscription_status.tier) data.data.subscription_status.tier = "premium";
+                                    if (!data.data.subscription_status.expires_at) data.data.subscription_status.expires_at = "9999-12-31T23:59:59Z";
+                                }
+
+                                if (data.data.expires_at) {
+                                    data.data.expires_at = "9999-12-31T23:59:59Z";
+                                }
+                            }
+
+                            Object.defineProperty(self, 'responseText', {
+                                value: JSON.stringify(data),
+                                writable: false
+                            });
+                            Object.defineProperty(self, 'response', {
+                                value: JSON.stringify(data),
+                                writable: false
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error modifying XHR response:', e);
                     }
                 }
             };
-            xhr.addEventListener('readystatechange', onReady);
-            return origSend.apply(this, arguments);
+
+            this.addEventListener('readystatechange', onReadyStateChange);
+            return originalSend.apply(this, arguments);
         };
-        return xhr;
     }
-    window.XMLHttpRequest = ModifiedXHR;
+
+    // Apply XHR override
+    window.XMLHttpRequest = function() {
+        const xhr = new XMLHttpRequest();
+        modifyXHR.call(xhr);
+        return xhr;
+    };
+    window.XMLHttpRequest.prototype = XHR;
+
+    // Also override localStorage data that might affect subscription status
+    const originalGetItem = localStorage.getItem;
+    localStorage.getItem = function(key) {
+        const value = originalGetItem.call(this, key);
+        // If there's a subscription-related flag, we could modify it
+        return value;
+    };
+
+    // Add a global variable that React might check
+    window.__ASURA_PREMIUM__ = true;
+
+    // Try to dispatch an event that React might listen for
+    setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('subscription-updated', {
+            detail: { has_subscription: true, plan: 'Premium' }
+        }));
+    }, 100);
 })();
