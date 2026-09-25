@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Flipkart Seller - BurnShare Risk Detector
-// @namespace    http://tampermonkey.net/
+// @namespace    flipkart_seller_offer_helper
 // @version      1.0
 // @description  Detect risky Flipkart promotions, highlight risky offers, and play music only while a selected promotion tab contains risky offers.
 // @author       NKR
